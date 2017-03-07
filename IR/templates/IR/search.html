@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Search</title>
+</head>
+
+<body>
+    {{ query }} = {{ query_terms }}
+    <br/>
+    <br/>
+    {% for item in results %}
+    Doc {{ item.0 }} has cosin = {{ item.1 }}
+    <br/>
+    {% endfor %}
+    
+    <br/>
+    Reranking based on phrases match<br/>
+    {% for item in display %}
+    Doc {{ item.0 }} : {{ item.1 }}
+    <br/>
+    {% endfor %}
+</body>
+</html>
