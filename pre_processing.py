@@ -26,12 +26,13 @@ with open('/home/loctv/IR/InformationRetrieval/IR/stop_words.txt', 'r', encoding
         stop_words.append(token)
 
 def progress(count, total, suffix=''):
+    """
+        print a progessbar in terminal while processing docs and indexing terms
+    """
     bar_len = 60
     filled_len = int(round(bar_len * count / float(total)))
-
     percents = round(100.0 * count / float(total), 1)
     bar = '=' * filled_len + '-' * (bar_len - filled_len)
-
     sys.stdout.write('[%s] %s%s ...%s\r' % (bar, percents, '%', suffix))
     sys.stdout.flush()  # As suggested by Rom Ruben
 
@@ -93,7 +94,6 @@ def tokenize(doc, doc_id):
 #################################################
 #################################################
 
-
 import sys, os, django
 sys.path.append("/home/loctv/InformationRetrieval") #here store is root folder(means parent).
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "InformationRetrieval.settings")
@@ -121,10 +121,6 @@ def dump_docs_to_database(dataset):
         print(e)
 
 def dump_terms_to_database():
-    docs = [None]
-    # first get all docs out of database 
-    for d in Doc.objects.all():
-        docs.append(d)
     # then with each term in word_bag 
     start = time.time()
     for id, term in enumerate(word_bag):
@@ -138,8 +134,6 @@ def dump_terms_to_database():
             e = Entry(term=t, tf=entry[1], doc=entry[0])
             e.save()
             t.entry_set.add(e)
-        # print(term, t.entry_set.all())
-        # print((id/len(word_bag)*100), '%')
         progress(id, len(word_bag))
     end = time.time()
     print("Took %d (s)" % round(end-start)) 
@@ -155,7 +149,6 @@ def clean_database():
 # dump_docs_to_database('/home/loctv/IR/InformationRetrieval/IR/dataset')
 # dump_terms_to_database()
 
-
 #############################################
 #############################################
 ###### Retrieval ############################
@@ -169,13 +162,6 @@ search_queries = (
 )
 
 def retrieval(query):
-    # for t in Term.objects.all():
-    #     print(t, end=': ')
-    #     for e in t.entry_set.all():
-    #         print(e, end=' ')
-    #     print()
-
-
     # # calculate vector space model for query
     tmp = [remove_punctutations(x.strip().lower()) for x in query.split()]
     query_vsm = {}
@@ -185,7 +171,6 @@ def retrieval(query):
         if t.content in tmp:
             length_query.add(t.content)
     query = [x for x in tmp if x in length_query]
-    # print(length_query)
     # # with each term in query, 
     for t in Term.objects.all():
         if t.content in tmp and t.content not in query_vsm:
@@ -195,7 +180,6 @@ def retrieval(query):
             # print(t.content, tf, idf)
             query_vsm[t.content] = tf*idf
     query_vsm['length'] = sum([query_vsm[x]**2 for x in query_vsm])
-    # print(query_vsm)
 
     # # calculate vector space model for docs 
     # # Note: docs will contains terms that are in query
@@ -212,7 +196,6 @@ def retrieval(query):
                 # normalize the term 
                 tf = entry.tf / d[0].length
                 idf = t[0].idf
-                # print(d, term, tf, idf, d[0].length)
                 # add to docs vector space model 
                 if entry.doc in docs_vsm:
                     docs_vsm[entry.doc][term] = tf*idf
@@ -220,9 +203,7 @@ def retrieval(query):
                     docs_vsm[entry.doc] = {
                         term:tf*idf
                     }
-    # print(docs_vsm)
                     
-    
     # calculate dot value between each doc and the query
     # with each doc
     for d in docs_vsm:
@@ -244,18 +225,18 @@ def retrieval(query):
     
     results = []
     for d in docs_vsm:
-        # print(d, docs_vsm[d]['cosin(d,q)'])
         results.append((d, docs_vsm[d]['cosin(d,q)']))
     results = sorted(results, key=lambda x: x[1], reverse=True)
-    print(*results[:35], sep='\n')
-    print(query)
     display = ""
     if len(query) > 1:
         display = n_gram(results[:35], query, docs_terms)
     return results[:35], display, query
 
 def n_gram(results, query, docs_terms):
-
+    """
+        generate n-word phrases from query 
+        then search for phrases in doc 
+    """
     n_grams = []
     for i in range(2, len(query)+1):
         for j in range(len(query)):
@@ -263,7 +244,6 @@ def n_gram(results, query, docs_terms):
             if len(temp) > 1:
                 n_grams.append(' '.join(temp))
     query = n_grams
-
     
     docs = []
     for id,_ in results:
@@ -299,9 +279,5 @@ def process_doc_for_n_gram(doc):
     result = re.sub(r' +', ' ', result)
     return result.strip()
 
-
 # for query in search_queries:
 # retrieval(search_queries[0])
-
-
-
